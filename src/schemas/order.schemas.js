@@ -21,8 +21,7 @@ const cartItemSchema = z.object({
     .transform((val) => parseFloat(val))
     .pipe(
       z
-        .number()
-        .int({ error: "Precio del producto requerida" })
+        .number({ error: "Precio del producto requerido" })
         .min(0, { error: "Precio debe ser mayor o igual a 0" })
         .refine((val) => !isNaN(val), {
           error: "Precio debe ser un número válido",

@@ -21,9 +21,24 @@ export const productSchema = z.object({
         required_error: 'Categoría requerida',
         invalid_type_error: 'Categoría inválida'
     }),
-    tallas: z.array(z.enum(['XS', 'S', 'M', 'L', 'XL', 'XXL'])).min(1, 'Debe seleccionar al menos una talla'),
+    tallas: z.array(z.string())
+        .min(0)
+        .optional()
+        .default([]),
     colores: z.array(z.string()).min(1, 'Debe seleccionar al menos un color')
-});//Fin de ProductSchema
+}).refine(
+    (data) => {
+        // Si no es accesorio, debe tener al menos una talla
+        if (data.categoria !== 'accesorios') {
+            return data.tallas && data.tallas.length > 0;
+        }
+        return true;
+    },
+    {
+        message: 'Debe seleccionar al menos una talla',
+        path: ['tallas'],
+    }
+);//Fin de ProductSchema
 
 export const productUpdateSchema =z.object({
     name: z.string('Nombre del producto requerido'),

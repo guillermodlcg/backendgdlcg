@@ -30,8 +30,7 @@ const productSchema = new mongoose.Schema(
         },
         tallas: [{
             type: String,
-            enum: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
-            required: true
+            required: false
         }],
         colores: [{
             type: String,
