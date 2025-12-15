@@ -4,7 +4,14 @@ import {
     register,
     logout,
     profile,
-    verifyToken
+    verifyToken,
+    updateProfile,
+    getUserStats,
+    addFavorite,
+    removeFavorite,
+    getFavorites,
+    changePassword,
+    deleteAccount
 } from '../controllers/auth.controller.js';
 
 import { authRequired } from '../middlewares/validateToken.js';
@@ -32,5 +39,21 @@ router.post('/logout', logout);
 //Ruta para el perfil del usuario
 router.get('/profile', authRequired, profile);
 
+//Ruta para actualizar el perfil del usuario
+router.put('/profile', authRequired, updateProfile);
+
+//Ruta para obtener estadísticas del usuario
+router.get('/profile/stats', authRequired, getUserStats);
+
+//Rutas para favoritos
+router.post('/favorites', authRequired, addFavorite);
+router.delete('/favorites/:productId', authRequired, removeFavorite);
+router.get('/favorites', authRequired, getFavorites);
+
+//Ruta para cambiar contraseña
+router.put('/change-password', authRequired, changePassword);
+
+//Ruta para eliminar cuenta
+router.delete('/delete-account', authRequired, deleteAccount);
 
 export default router;

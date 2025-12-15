@@ -158,7 +158,8 @@ export const profile = async (req, res) => {
         id: userFound._id,
         username: userFound.username,
         email: userFound.email,
-        role: role.role
+        role: role.role,
+        createdAt: userFound.createdAt
     });
 } // Fin del Profile
 //Función para validar el token de inicio de sesión
@@ -196,3 +197,214 @@ export const verifyToken = async (req, res) => {
 
     })//Fin de jwt.verifyToken
 }//Fin de verifyToken
+
+// Función para actualizar el perfil del usuario
+export const updateProfile = async (req, res) => {
+    try {
+        const { username, email } = req.body;
+        const userId = req.user.id;
+
+        // Verificar si el email ya está en uso por otro usuario
+        if (email) {
+            const emailExists = await User.findOne({ email, _id: { $ne: userId } });
+            if (emailExists) {
+                return res.status(400).json({ message: ["El email ya está en uso"] });
+            }
+        }
+
+        // Actualizar usuario
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { username, email },
+            { new: true }
+        );
+
+        if (!updatedUser) {
+            return res.status(404).json({ message: ["Usuario no encontrado"] });
+        }
+
+        // Obtener el rol del usuario
+        const role = await Role.findById(updatedUser.role);
+
+        res.json({
+            id: updatedUser._id,
+            username: updatedUser.username,
+            email: updatedUser.email,
+            role: role.role,
+            createdAt: updatedUser.createdAt
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: ["Error al actualizar el perfil"] });
+    }
+};
+
+// Función para obtener estadísticas del usuario
+export const getUserStats = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const Order = (await import('../models/order.models.js')).default;
+
+        // Obtener el usuario con favoritos
+        const user = await User.findById(userId);
+
+        // Obtener todas las órdenes del usuario
+        const orders = await Order.find({ user: userId });
+
+        // Calcular estadísticas
+        const totalOrders = orders.length;
+        const completedOrders = orders.filter(order => order.status === 'delivered').length;
+
+        res.json({
+            totalOrders,
+            completedOrders,
+            favoriteProducts: user.favorites?.length || 0
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: ["Error al obtener estadísticas"] });
+    }
+};
+
+// Función para agregar un producto a favoritos
+export const addFavorite = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { productId } = req.body;
+
+        const user = await User.findById(userId);
+        
+        if (!user) {
+            return res.status(404).json({ message: ["Usuario no encontrado"] });
+        }
+
+        // Inicializar favorites si no existe
+        if (!user.favorites) {
+            user.favorites = [];
+        }
+
+        // Verificar si ya está en favoritos
+        if (user.favorites.includes(productId)) {
+            return res.status(400).json({ message: ["El producto ya está en favoritos"] });
+        }
+
+        user.favorites.push(productId);
+        await user.save();
+
+        res.json({ favorites: user.favorites });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: ["Error al agregar a favoritos"] });
+    }
+};
+
+// Función para quitar un producto de favoritos
+export const removeFavorite = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { productId } = req.params;
+
+        const user = await User.findById(userId);
+        
+        if (!user) {
+            return res.status(404).json({ message: ["Usuario no encontrado"] });
+        }
+
+        // Inicializar favorites si no existe
+        if (!user.favorites) {
+            user.favorites = [];
+        }
+
+        user.favorites = user.favorites.filter(fav => fav.toString() !== productId);
+        await user.save();
+
+        res.json({ favorites: user.favorites });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: ["Error al quitar de favoritos"] });
+    }
+};
+
+// Función para obtener productos favoritos
+export const getFavorites = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const user = await User.findById(userId).populate('favorites');
+        
+        if (!user) {
+            return res.status(404).json({ message: ["Usuario no encontrado"] });
+        }
+
+        // Si el usuario no tiene el campo favorites, devolver array vacío
+        res.json(user.favorites || []);
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: ["Error al obtener favoritos"] });
+    }
+};
+
+// Función para cambiar contraseña
+export const changePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const userId = req.user.id;
+
+        // Buscar el usuario
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: ["Usuario no encontrado"] });
+        }
+
+        // Verificar que la contraseña actual sea correcta
+        const isMatch = await bcryptjs.compare(currentPassword, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: ["La contraseña actual es incorrecta"] });
+        }
+
+        // Encriptar la nueva contraseña
+        const passwordHash = await bcryptjs.hash(newPassword, 10);
+        
+        // Actualizar la contraseña
+        user.password = passwordHash;
+        await user.save();
+
+        res.json({ message: "Contraseña actualizada correctamente" });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: ["Error al cambiar la contraseña"] });
+    }
+};
+
+// Función para eliminar cuenta
+export const deleteAccount = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { password } = req.body;
+
+        // Buscar el usuario
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: ["Usuario no encontrado"] });
+        }
+
+        // Verificar la contraseña
+        const isMatch = await bcryptjs.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: ["Contraseña incorrecta"] });
+        }
+
+        // Eliminar el usuario
+        await User.findByIdAndDelete(userId);
+
+        // Limpiar la cookie
+        res.cookie("token", "", {
+            expires: new Date(0)
+        });
+
+        res.json({ message: "Cuenta eliminada correctamente" });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: ["Error al eliminar la cuenta"] });
+    }
+};
