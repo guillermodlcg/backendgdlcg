@@ -20,7 +20,13 @@ const userSchema = mongoose.Schema({
         ref: 'Role',
         type: mongoose.Schema.Types.ObjectId,
         required: true
-    }
+    },
+    favorites: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Product'
+    }]
+}, {
+    timestamps: true
 })
 
 export default mongoose.model('User', userSchema);

@@ -24,8 +24,7 @@ app.use(cors({
     origin: [
         process.env.BASE_URL_BACKEND, //la dejamos para que funcione postman
         process.env.BASE_URL_FRONTEND
-    ],
-    credentials: true
+    ]
 }));
 app.use(morgan('dev'));
 app.use(express.json());
