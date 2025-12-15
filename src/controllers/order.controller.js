@@ -106,7 +106,9 @@ export const updateOrderStatus = async (req, res) => {
 //Obtener todas las ordenes (solo admin)
 export const getAllOrders = async (req, res) => {
   try {
-    const orders = await Order.find().populate('user', 'username email');
+    const orders = await Order.find()
+      .populate('user', 'username email')
+      .sort({ createdAt: -1 }); // Ordenar por fecha de creación descendente
     res.json(orders);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -116,7 +118,9 @@ export const getAllOrders = async (req, res) => {
 //Obtener ordenes de un usuario específico
 export const getUserOrders = async (req, res) => {
   try {
-    const orders = await Order.find({ user: req.user.id });
+    const orders = await Order.find({ user: req.user.id })
+      .populate('user', 'username email')
+      .sort({ createdAt: -1 }); // Ordenar por fecha de creación descendente
     res.json(orders);
   } catch (error) {
     res.status(500).json({ message: error.message });
