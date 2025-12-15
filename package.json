@@ -8,8 +8,8 @@
     "dev": "nodemon src/index.js",
     "setup": "node src/libs/initialSetup.js",
     "seed": "node src/seed.js",
+    "build": "npm install && npm run seed",
     "start": "node src/index.js"
-
   },
   "keywords": [],
   "author": "",
