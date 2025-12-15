@@ -15,5 +15,5 @@ cloudinary.config({
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET
 })
-app.listen(4000, 'localhost');
+app.listen(4000);
 console.log("Servidor corriendo en el puerto 4000");
