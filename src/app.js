@@ -21,10 +21,19 @@ import { success } from 'zod';
 
 const app = express();
 app.use(cors({
-    origin: [
-        process.env.BASE_URL_BACKEND, 
-        process.env.BASE_URL_FRONTEND
-    ],
+    origin: function(origin, callback) {
+        const allowed = [
+            process.env.BASE_URL_BACKEND,
+            process.env.BASE_URL_FRONTEND,
+            'http://localhost:5173',
+            'http://localhost:4000'
+        ];
+        if (!origin || allowed.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('No permitido por CORS'));
+        }
+    },
     credentials: true
 }));
 app.use(morgan('dev'));
