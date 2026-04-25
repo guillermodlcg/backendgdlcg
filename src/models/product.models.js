@@ -25,8 +25,8 @@ const productSchema = new mongoose.Schema(
         categoria: {
             type: String,
             required: true,
-            enum: ['vestidos', 'blusas', 'pantalones', 'faldas', 'trajes', 'abrigos', 'accesorios'],
-            default: 'vestidos'
+            enum: ['leggings', 'sudaderas', 'tops', 'calzado', 'shorts', 'pants', 'accesorios'],
+            default: 'tops'
         },
         tallas: [{
             type: String,

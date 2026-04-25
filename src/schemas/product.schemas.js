@@ -17,7 +17,7 @@ export const productSchema = z.object({
                 .min(0, {message: 'La cantidad de productos debe ser mayor o igual a 0'})
         .refine((val)=>!isNaN(val), { message: 'La cantidad debe ser número válido' })
     ),
-    categoria: z.enum(['vestidos', 'blusas', 'pantalones', 'faldas', 'trajes', 'abrigos', 'accesorios'], {
+    categoria: z.enum(['tops', 'leggings', 'shorts', 'calzado', 'sudaderas', 'pants', 'accesorios'], {
         required_error: 'Categoría requerida',
         invalid_type_error: 'Categoría inválida'
     }),
@@ -49,5 +49,5 @@ export const productUpdateSchema =z.object({
     .int({error:'Cantidad del producto requerida'})
     .min(0, {error:'La cantidad debe ser mayor o igual a 0'})
     .refine((val) => !isNaN(val), {error: 'La cantidad debe ser un número válido' }),
-    image: z.string('Url de la imagen requerida'),
+    image: z.string().optional(),
 });//Fin de ProductUpdateSchema

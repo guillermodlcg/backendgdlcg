@@ -75,7 +75,6 @@ router.put(
   authRequired,
   isAdmin,
   uploadToCloudinary,
-  validateSchemas(productSchema),
   updateProductWithImage
 );
 

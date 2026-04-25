@@ -382,22 +382,18 @@ export const deleteAccount = async (req, res) => {
         const userId = req.user.id;
         const { password } = req.body;
 
-        // Buscar el usuario
         const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ message: ["Usuario no encontrado"] });
         }
 
-        // Verificar la contraseña
         const isMatch = await bcryptjs.compare(password, user.password);
         if (!isMatch) {
             return res.status(400).json({ message: ["Contraseña incorrecta"] });
         }
 
-        // Eliminar el usuario
         await User.findByIdAndDelete(userId);
 
-        // Limpiar la cookie
         res.cookie("token", "", {
             expires: new Date(0)
         });
@@ -406,5 +402,39 @@ export const deleteAccount = async (req, res) => {
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: ["Error al eliminar la cuenta"] });
+    }
+};
+
+// Función para obtener todos los usuarios (admin)
+export const getAllUsers = async (req, res) => {
+    try {
+        const users = await User.find({}).populate('role').select('-password');
+        const result = users.map(u => ({
+            id: u._id,
+            username: u.username,
+            email: u.email,
+            role: u.role?.role || 'user',
+            createdAt: u.createdAt
+        }));
+        res.json(result);
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: ["Error al obtener usuarios"] });
+    }
+};
+
+// Función para eliminar un usuario (admin)
+export const deleteUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (id === req.user.id)
+            return res.status(400).json({ message: ["No puedes eliminar tu propia cuenta desde aquí"] });
+        const deleted = await User.findByIdAndDelete(id);
+        if (!deleted)
+            return res.status(404).json({ message: ["Usuario no encontrado"] });
+        res.json({ message: "Usuario eliminado correctamente" });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: ["Error al eliminar el usuario"] });
     }
 };

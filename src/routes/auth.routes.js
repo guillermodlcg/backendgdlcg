@@ -11,10 +11,13 @@ import {
     removeFavorite,
     getFavorites,
     changePassword,
-    deleteAccount
+    deleteAccount,
+    getAllUsers,
+    deleteUser
 } from '../controllers/auth.controller.js';
 
 import { authRequired } from '../middlewares/validateToken.js';
+import { isAdmin } from '../middlewares/isAdmin.js';
 
 //importamos validateSchema
 import { validateSchemas } from '../middlewares/validateSchemas.js';
@@ -55,5 +58,9 @@ router.put('/change-password', authRequired, changePassword);
 
 //Ruta para eliminar cuenta
 router.delete('/delete-account', authRequired, deleteAccount);
+
+//Rutas admin — gestión de usuarios
+router.get('/admin/users', authRequired, isAdmin, getAllUsers);
+router.delete('/admin/users/:id', authRequired, isAdmin, deleteUser);
 
 export default router;

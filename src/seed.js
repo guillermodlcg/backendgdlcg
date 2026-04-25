@@ -3,261 +3,250 @@ import Product from './models/product.models.js';
 import User from './models/user.models.js';
 import Role from './models/roles.models.js';
 import dotenv from 'dotenv';
+import bcryptjs from 'bcryptjs';
 
 dotenv.config();
 
-// Conectar a la base de datos
-mongoose.connect(process.env.MONGODB_URL)
-    .then(() => console.log('✅ Conectado a MongoDB'))
-    .catch(err => {
-        console.error('❌ Error conectando a MongoDB:', err);
+const connectSeedDB = async () => {
+    if (!process.env.MONGODB_URL) {
+        console.error('❌ Error: MONGODB_URL no detectada. Revisa tu archivo .env');
         process.exit(1);
-    });
+    }
+    try {
+        await mongoose.connect(process.env.MONGODB_URL);
+        console.log('✅ Conectado a MongoDB para seeding');
+    } catch (err) {
+        console.error('❌ Error de conexión:', err);
+        process.exit(1);
+    }
+};
 
 const seedProducts = async () => {
+    await connectSeedDB();
     try {
-        // Buscar un usuario para asignar los productos
-        let adminUser = await User.findOne();
+        await Role.deleteMany({});
+        await User.deleteMany({});
+        console.log('🗑️ Base de datos de usuarios limpia');
 
-        // Si no hay ningún usuario, crear uno temporal
-        if (!adminUser) {
-            console.log('⚠️ No hay usuarios en la base de datos. Creando usuario temporal...');
-            
-            // Buscar o crear rol admin
-            let adminRole = await Role.findOne({ name: 'admin' });
-            if (!adminRole) {
-                adminRole = await Role.create({ name: 'admin' });
-                console.log('📝 Rol admin creado');
-            }
-            
-            adminUser = await User.create({
-                username: 'admin',
-                email: 'admin@oldchick.com',
-                password: 'admin123',
-                roles: [adminRole._id]
-            });
-            console.log('👤 Usuario admin temporal creado');
-        }
+        const adminRole = await Role.create({ role: 'admin' });
+        await Role.create({ role: 'user' });
+        console.log('📝 Roles creados (admin, user)');
 
-        console.log(`👤 Usando usuario: ${adminUser.username}`);
+        const hashedPassword = await bcryptjs.hash('admin123', 10);
+        const adminUser = await User.create({
+            username: 'admin',
+            email: 'admin@gdlcg.com',
+            password: hashedPassword,
+            role: adminRole._id
+        });
+        console.log('👤 Usuario administrador creado: admin / admin123');
 
-        // Limpiar productos existentes (opcional)
         await Product.deleteMany({});
         console.log('🗑️ Productos anteriores eliminados');
 
-        // Productos de prueba
         const products = [
-            // VESTIDOS
+            // TOPS
             {
-                name: 'Vestido Floral Verano',
-                description: 'Hermoso vestido floral perfecto para el verano, con corte A y manga corta.',
-                price: 899.99,
-                quantity: 15,
-                categoria: 'vestidos',
-                tallas: ['S', 'M', 'L', 'XL'],
-                colores: ['Azul', 'Rosa', 'Blanco'],
-                image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=500',
+                name: 'Top Deportivo Dark Knight',
+                description: 'Top de alto impacto en color negro mate con tecnología dry-fit.',
+                price: 749.00, quantity: 40,
+                categoria: 'tops', tallas: ['XS', 'S', 'M', 'L'],
+                colores: ['Negro'],
+                image: 'https://images.unsplash.com/photo-1518310383802-640c2de311b2?w=800',
                 user: adminUser._id
             },
             {
-                name: 'Vestido de Noche Elegante',
-                description: 'Vestido largo de noche con diseño elegante y sofisticado, ideal para eventos especiales.',
-                price: 1599.99,
-                quantity: 8,
-                categoria: 'vestidos',
-                tallas: ['XS', 'S', 'M', 'L'],
-                colores: ['Negro', 'Rojo', 'Azul Marino'],
-                image: 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=500',
+                name: 'Top Platinum Performance',
+                description: 'Top deportivo con acabado platinado y soporte medio impacto.',
+                price: 699.00, quantity: 35,
+                categoria: 'tops', tallas: ['XS', 'S', 'M'],
+                colores: ['Platino', 'Blanco'],
+                image: 'https://images.unsplash.com/photo-1571945153237-4929e783af4a?w=800',
                 user: adminUser._id
             },
             {
-                name: 'Vestido Casual Algodón',
-                description: 'Vestido casual de algodón cómodo para uso diario, con bolsillos laterales.',
-                price: 599.99,
-                quantity: 20,
-                categoria: 'vestidos',
-                tallas: ['S', 'M', 'L', 'XL', 'XXL'],
-                colores: ['Gris', 'Beige', 'Verde'],
-                image: 'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=500',
+                name: 'Top Gris Steel',
+                description: 'Top sin mangas de compresión ligera en gris metálico.',
+                price: 599.00, quantity: 45,
+                categoria: 'tops', tallas: ['S', 'M', 'L'],
+                colores: ['Gris'],
+                image: 'https://images.unsplash.com/photo-1583744946564-b52ac1c389c8?w=800',
                 user: adminUser._id
             },
 
-            // BLUSAS
+            // LEGGINGS
             {
-                name: 'Blusa de Seda Elegante',
-                description: 'Blusa de seda suave con cuello en V, perfecta para la oficina o eventos formales.',
-                price: 749.99,
-                quantity: 12,
-                categoria: 'blusas',
-                tallas: ['XS', 'S', 'M', 'L'],
-                colores: ['Blanco', 'Negro', 'Champagne'],
-                image: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=500',
+                name: 'Leggings Platinum Elite',
+                description: 'Leggings de compresión con acabado platinado y tecnología de secado rápido.',
+                price: 1299.00, quantity: 50,
+                categoria: 'leggings', tallas: ['XS', 'S', 'M', 'L'],
+                colores: ['Platino', 'Gris'],
+                image: 'https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=800',
                 user: adminUser._id
             },
             {
-                name: 'Blusa Campesina Bordada',
-                description: 'Blusa estilo campesino con bordados artesanales y mangas amplias.',
-                price: 549.99,
-                quantity: 18,
-                categoria: 'blusas',
-                tallas: ['S', 'M', 'L', 'XL'],
-                colores: ['Blanco', 'Azul', 'Rosa'],
-                image: 'https://images.unsplash.com/photo-1580657018950-c7f7d6a6d990?w=500',
-                user: adminUser._id
-            },
-
-            // PANTALONES
-            {
-                name: 'Jeans Skinny Clásicos',
-                description: 'Jeans skinny de mezclilla elástica para máxima comodidad y estilo.',
-                price: 899.99,
-                quantity: 25,
-                categoria: 'pantalones',
-                tallas: ['XS', 'S', 'M', 'L', 'XL'],
-                colores: ['Azul Oscuro', 'Negro', 'Gris'],
-                image: 'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=500',
+                name: 'Leggings Black Shadow',
+                description: 'Leggings negros de alto rendimiento con cintura alta y bolsillo lateral.',
+                price: 1199.00, quantity: 60,
+                categoria: 'leggings', tallas: ['XS', 'S', 'M', 'L', 'XL'],
+                colores: ['Negro'],
+                image: 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?w=800',
                 user: adminUser._id
             },
             {
-                name: 'Pantalón de Vestir',
-                description: 'Pantalón de vestir elegante de corte recto, ideal para look profesional.',
-                price: 799.99,
-                quantity: 15,
-                categoria: 'pantalones',
-                tallas: ['S', 'M', 'L', 'XL'],
-                colores: ['Negro', 'Beige', 'Gris Oscuro'],
-                image: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=500',
+                name: 'Leggings White Edition',
+                description: 'Leggings blancos con tejido opaco y tecnología anti-transparencia.',
+                price: 1099.00, quantity: 30,
+                categoria: 'leggings', tallas: ['S', 'M', 'L'],
+                colores: ['Blanco'],
+                image: 'https://images.unsplash.com/photo-1548690312-e3b507d8c110?w=800',
                 user: adminUser._id
             },
 
-            // FALDAS
+            // SHORTS
             {
-                name: 'Falda Plisada Midi',
-                description: 'Falda plisada de largo midi, perfecta para looks elegantes y femeninos.',
-                price: 649.99,
-                quantity: 14,
-                categoria: 'faldas',
-                tallas: ['XS', 'S', 'M', 'L'],
-                colores: ['Negro', 'Vino', 'Azul Marino'],
-                image: 'https://images.unsplash.com/photo-1583496661160-fb5886a0aaaa?w=500',
+                name: 'Shorts Mesh Platinum',
+                description: 'Shorts transpirables con malla interior y acabado platinado.',
+                price: 699.00, quantity: 40,
+                categoria: 'shorts', tallas: ['S', 'M', 'L', 'XL'],
+                colores: ['Platino', 'Gris'],
+                image: 'https://images.unsplash.com/photo-1562886877-f93f8b9a5e8e?w=800',
                 user: adminUser._id
             },
             {
-                name: 'Falda Denim Corta',
-                description: 'Falda corta de mezclilla con diseño moderno y juvenil.',
-                price: 499.99,
-                quantity: 20,
-                categoria: 'faldas',
-                tallas: ['S', 'M', 'L', 'XL'],
-                colores: ['Azul Claro', 'Negro'],
-                image: 'https://images.unsplash.com/photo-1580657018950-c7f7d6a6d990?w=500',
+                name: 'Shorts Dark Runner',
+                description: 'Shorts negros de running con bolsillos laterales y corte atlético.',
+                price: 649.00, quantity: 50,
+                categoria: 'shorts', tallas: ['S', 'M', 'L', 'XL'],
+                colores: ['Negro'],
+                image: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=800',
                 user: adminUser._id
             },
 
-            // TRAJES
+            // SUDADERAS
             {
-                name: 'Conjunto Blazer y Pantalón',
-                description: 'Set ejecutivo de blazer y pantalón a juego, corte moderno y elegante.',
-                price: 1899.99,
-                quantity: 10,
-                categoria: 'trajes',
-                tallas: ['S', 'M', 'L', 'XL'],
-                colores: ['Negro', 'Gris', 'Azul Marino'],
-                image: 'https://images.unsplash.com/photo-1591369822096-ffd140ec948f?w=500',
+                name: 'Sudadera GDLCG Tech',
+                description: 'Sudadera premium color gris carbón con detalles reflectantes.',
+                price: 1599.00, quantity: 30,
+                categoria: 'sudaderas', tallas: ['S', 'M', 'L', 'XL'],
+                colores: ['Gris', 'Negro'],
+                image: 'https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=800',
+                user: adminUser._id
+            },
+            {
+                name: 'Sudadera Platinum Hood',
+                description: 'Hoodie con capucha en tono platino, interior afelpado y bolsillo canguro.',
+                price: 1799.00, quantity: 25,
+                categoria: 'sudaderas', tallas: ['S', 'M', 'L', 'XL', 'XXL'],
+                colores: ['Platino'],
+                image: 'https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=800',
+                user: adminUser._id
+            },
+            {
+                name: 'Sudadera Black Elite',
+                description: 'Sudadera negra sin capucha de corte slim con logo GDLCG bordado.',
+                price: 1499.00, quantity: 35,
+                categoria: 'sudaderas', tallas: ['S', 'M', 'L', 'XL'],
+                colores: ['Negro'],
+                image: 'https://images.unsplash.com/photo-1578768079052-aa76e52ff62e?w=800',
                 user: adminUser._id
             },
 
-            // ABRIGOS
+            // PANTS
             {
-                name: 'Abrigo Largo de Lana',
-                description: 'Abrigo elegante de lana para invierno, con botones y bolsillos laterales.',
-                price: 2199.99,
-                quantity: 8,
-                categoria: 'abrigos',
-                tallas: ['S', 'M', 'L'],
-                colores: ['Camel', 'Negro', 'Gris'],
-                image: 'https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=500',
+                name: 'Pants Jogger Platinum',
+                description: 'Pants jogger con puños ajustables y acabado platinado.',
+                price: 1399.00, quantity: 30,
+                categoria: 'pants', tallas: ['S', 'M', 'L', 'XL'],
+                colores: ['Platino', 'Gris'],
+                image: 'https://images.unsplash.com/photo-1552902865-b72c031ac5ea?w=800',
                 user: adminUser._id
             },
             {
-                name: 'Chamarra Denim Oversized',
-                description: 'Chamarra de mezclilla estilo oversized, perfecta para looks casuales.',
-                price: 899.99,
-                quantity: 16,
-                categoria: 'abrigos',
-                tallas: ['S', 'M', 'L', 'XL'],
-                colores: ['Azul', 'Negro', 'Blanco'],
-                image: 'https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=500',
+                name: 'Pants Dark Training',
+                description: 'Pants negros de entrenamiento con bolsillos con cierre y corte recto.',
+                price: 1299.00, quantity: 40,
+                categoria: 'pants', tallas: ['S', 'M', 'L', 'XL', 'XXL'],
+                colores: ['Negro'],
+                image: 'https://images.unsplash.com/photo-1539185441755-769473a23570?w=800',
+                user: adminUser._id
+            },
+            {
+                name: 'Pants White Performance',
+                description: 'Pants blancos de alto rendimiento con franja lateral gris.',
+                price: 1199.00, quantity: 25,
+                categoria: 'pants', tallas: ['S', 'M', 'L'],
+                colores: ['Blanco', 'Gris'],
+                image: 'https://images.unsplash.com/photo-1560243563-062bfc001d68?w=800',
                 user: adminUser._id
             },
 
-            // ACCESORIOS (sin tallas requeridas)
+            // CALZADO
             {
-                name: 'Bolsa Crossbody Cuero',
-                description: 'Elegante bolsa crossbody de cuero sintético con cadena dorada.',
-                price: 799.99,
-                quantity: 12,
-                categoria: 'accesorios',
-                tallas: ['Único'],
-                colores: ['Negro', 'Café', 'Rojo'],
-                image: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=500',
+                name: 'Tenis Phantom Silver',
+                description: 'Calzado para running con amortiguación avanzada y color plata metálico.',
+                price: 2499.00, quantity: 20,
+                categoria: 'calzado', tallas: ['24', '25', '26', '27', '28'],
+                colores: ['Plata', 'Blanco'],
+                image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800',
                 user: adminUser._id
             },
             {
-                name: 'Collar de Perlas',
-                description: 'Hermoso collar de perlas sintéticas, elegante y atemporal.',
-                price: 349.99,
-                quantity: 25,
-                categoria: 'accesorios',
-                tallas: [],
-                colores: ['Blanco', 'Crema'],
-                image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=500',
+                name: 'Tenis Dark Runner Pro',
+                description: 'Tenis negros de alto rendimiento con suela de carbono.',
+                price: 2799.00, quantity: 15,
+                categoria: 'calzado', tallas: ['24', '25', '26', '27', '28', '29'],
+                colores: ['Negro'],
+                image: 'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=800',
                 user: adminUser._id
             },
             {
-                name: 'Aretes Dorados Minimalistas',
-                description: 'Set de aretes dorados con diseño minimalista y moderno.',
-                price: 199.99,
-                quantity: 30,
-                categoria: 'accesorios',
-                tallas: [],
-                colores: ['Dorado', 'Plateado', 'Oro Rosa'],
-                image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=500',
+                name: 'Tenis Platinum Training',
+                description: 'Calzado de entrenamiento con soporte lateral y diseño platinado.',
+                price: 2199.00, quantity: 25,
+                categoria: 'calzado', tallas: ['23', '24', '25', '26', '27'],
+                colores: ['Platino', 'Gris'],
+                image: 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=800',
+                user: adminUser._id
+            },
+
+            // ACCESORIOS
+            {
+                name: 'Banda Deportiva GDLCG',
+                description: 'Banda para cabeza antideslizante en colores de la marca.',
+                price: 199.00, quantity: 80,
+                categoria: 'accesorios', tallas: ['Único'],
+                colores: ['Negro', 'Gris', 'Platino'],
+                image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800',
                 user: adminUser._id
             },
             {
-                name: 'Bufanda de Lana',
-                description: 'Bufanda tejida de lana suave, perfecta para el invierno.',
-                price: 299.99,
-                quantity: 20,
-                categoria: 'accesorios',
-                tallas: ['Único'],
-                colores: ['Gris', 'Beige', 'Negro', 'Vino'],
-                image: 'https://images.unsplash.com/photo-1520903920243-00d872a2d1c9?w=500',
+                name: 'Mochila Training Pack',
+                description: 'Mochila deportiva impermeable con compartimento para laptop.',
+                price: 899.00, quantity: 20,
+                categoria: 'accesorios', tallas: ['Único'],
+                colores: ['Negro', 'Gris'],
+                image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800',
                 user: adminUser._id
             },
             {
-                name: 'Cinturón Cuero Trenzado',
-                description: 'Cinturón de cuero trenzado con hebilla metálica.',
-                price: 399.99,
-                quantity: 15,
-                categoria: 'accesorios',
-                tallas: ['Pequeño', 'Mediano', 'Grande'],
-                colores: ['Café', 'Negro'],
-                image: 'https://images.unsplash.com/photo-1624222247344-550fb60583bb?w=500',
+                name: 'Guantes Gym Pro',
+                description: 'Guantes de gimnasio con palma acolchada y muñequera de soporte.',
+                price: 349.00, quantity: 50,
+                categoria: 'accesorios', tallas: ['S', 'M', 'L'],
+                colores: ['Negro', 'Platino'],
+                image: 'https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?w=800',
                 user: adminUser._id
             }
         ];
 
-        // Insertar productos
         const createdProducts = await Product.insertMany(products);
         console.log(`✅ ${createdProducts.length} productos creados exitosamente!`);
-        
-        // Mostrar resumen
+
         const categoryCounts = await Product.aggregate([
             { $group: { _id: '$categoria', count: { $sum: 1 } } }
         ]);
-        
+
         console.log('\n📊 Resumen por categoría:');
         categoryCounts.forEach(cat => {
             console.log(`   ${cat._id}: ${cat.count} productos`);

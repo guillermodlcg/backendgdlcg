@@ -66,49 +66,28 @@ export const getProduct = async (req, res) => {
 export const deleteProduct = async (req, res) => {
     try {
         const product = await Product.findById(req.params.id);
-        if (!product) //No se encontró el producto
-            return res.status(404)
-                .json({ message: ['Producto no encontrado para eliminar'] })
+        if (!product)
+            return res.status(404).json({ message: ['Producto no encontrado para eliminar'] });
 
-        //Par eliminar la imagen de cloudinary, es necesario
-        //extraer rl nombre de la imagen sin url ni extención
+        // Solo intentar borrar de Cloudinary si la imagen es de Cloudinary
+        if (product.image && product.image.includes('cloudinary.com')) {
+            const urlArray = product.image.split('/');
+            const imageName = urlArray[urlArray.length - 1].split('.')[0];
+            try {
+                await cloudinary.uploader.destroy(imageName);
+            } catch (cloudErr) {
+                console.log('Advertencia: no se pudo eliminar imagen de Cloudinary:', cloudErr.message);
+            }
+        }
 
-        //Obtenemos la url de la imagen de cloudinary
-        //http://res.cloudinary.com/dzcyhcl75/image/upload/v1761746747/cbugwkxxilxz9sdssi8q.jpg
-        const imageUrl = product.image;
+        const deleted = await Product.findByIdAndDelete(req.params.id);
+        if (!deleted)
+            return res.status(404).json({ message: ['Producto no eliminado'] });
 
-        //Dividimos por diagonales / la url y nos quedamos con el ultimo elemento
-        //que constiene el nombre de la imagen
-        const urlArray = imageUrl.split('/');
-
-        //image contendrá el id de la imagfen en cloudinary
-        //image = cbugwkxxilxz9sdssi8q.jpg
-        const image = urlArray[urlArray.length - 1];
-
-        //Dividimos el nombre de la imagen para quitar la extención
-        //imageName = cbugwkxxilxz9sdssi8q
-        const imageName = image.split('.')[0];
-
-        //Eliminamos la imagen de cloudinary
-        const result = await cloudinary.uploader.destroy(imageName);
-        if (result.result === 'ok') {
-            //Si se eliminó la imagen, 
-            const deleteProduct = await Product.findByIdAndDelete(req.params.id);
-
-            if (!deleteProduct)//No se pudo eliminar el producto
-                return res.status(404)
-                    .json({ message: ['Producto no eliminado'] })
-
-            return res.json(deleteProduct);
-        } else {
-            //Si hay error al eliminar la imagen retornamos el error y no borramos el producto
-            return res.status(500)
-                .json({ message: ['Error al eliminar el producto'] })
-        }//Fin de else
+        return res.json(deleted);
     } catch (error) {
         console.log(error);
-        res.status(500)
-            .json({ message: ['Error al eliminar un producto por'] })
+        res.status(500).json({ message: ['Error al eliminar un producto'] });
     }
 };//Fin de deleteProduct
 
@@ -141,50 +120,46 @@ export const updateProductWithoutImage = async (req, res) => {
 
 //Funcion para actualizar el producto con imagen
 export const updateProductWithImage = async (req, res) => {
-    try { //Comprobamos que exista el producto a actualizar en la red
+    try {
         const product = await Product.findById(req.params.id);
-        if (!product) //No se encontró el producto
-            return res.status(404)
-                .json({ message: ['Producto no encontrado para actualizar'] })
+        if (!product)
+            return res.status(404).json({ message: ['Producto no encontrado para actualizar'] });
 
-        //Comprobamos que venga el nuevo archivo para actualizar
-        if (!req.file) {
-            res.status(500)
-                .json({ message: ['Error al actualizar producto, no se encontró la imagen'] });
-        };
+        let imageUrl = product.image; // mantener imagen actual por defecto
 
-        //Eliminamos la imagen anterior de Cloudinary
-        //Obtenemos la url de la imagen de Cloudinary
-        const imageUrl = product.image;
-        const urlArray = imageUrl.split('/');
-        const image = urlArray[urlArray.length - 1];
-        const imageName = image.split('.')[0];
+        // Solo subir nueva imagen si viene archivo
+        if (req.urlImage) {
+            // Eliminar imagen anterior de Cloudinary si es de Cloudinary
+            if (product.image && product.image.includes('cloudinary.com')) {
+                const urlArray = product.image.split('/');
+                const imageName = urlArray[urlArray.length - 1].split('.')[0];
+                try { await cloudinary.uploader.destroy(imageName); } catch (e) {}
+            }
+            imageUrl = req.urlImage;
+        }
 
-        //Eliminamos la imagen de cloudinary
-        const result = await cloudinary.uploader.destroy(imageName);
-        if (!result.result === 'ok') { //Hay un error al eliminar la imagen y retornamos error
-            return res.status(500)//si hay error
-                .json({ message: ['Error al eliminar la imagen del producto'] })
-        }//Fin de if
+        // Parsear tallas y colores si vienen como string
+        let tallas = req.body.tallas;
+        let colores = req.body.colores;
+        if (typeof tallas === 'string') { try { tallas = JSON.parse(tallas); } catch { tallas = []; } }
+        if (typeof colores === 'string') { try { colores = JSON.parse(colores); } catch { colores = []; } }
 
-        const dataProduct = ({
+        const dataProduct = {
             name: req.body.name,
             description: req.body.description,
-            price: req.body.price,
-            quantity: req.body.quantity,
+            price: parseFloat(req.body.price),
+            quantity: parseInt(req.body.quantity),
             categoria: req.body.categoria,
-            tallas: req.body.tallas,
-            colores: req.body.colores,
-            image: req.urlImage,
+            tallas,
+            colores,
+            image: imageUrl,
             user: req.user.id
-        });
+        };
         const updatedProduct = await Product.findByIdAndUpdate(req.params.id, dataProduct, { new: true });
         res.json(updatedProduct);
-
     } catch (error) {
         console.log(error);
-        res.status(500)
-            .json({ message: ['Error al actualizar un producto'] })
+        res.status(500).json({ message: ['Error al actualizar un producto'] });
     }
 };//Fin de updateProductWithImage
 
