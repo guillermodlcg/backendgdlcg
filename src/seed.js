@@ -7,26 +7,14 @@ import bcryptjs from 'bcryptjs';
 
 dotenv.config();
 
-const connectSeedDB = async () => {
-    if (!process.env.MONGODB_URL) {
-        console.error('❌ Error: MONGODB_URL no detectada. Revisa tu archivo .env');
-        process.exit(1);
-    }
+export const runSeedIfEmpty = async () => {
     try {
-        await mongoose.connect(process.env.MONGODB_URL);
-        console.log('✅ Conectado a MongoDB para seeding');
-    } catch (err) {
-        console.error('❌ Error de conexión:', err);
-        process.exit(1);
-    }
-};
-
-const seedProducts = async () => {
-    await connectSeedDB();
-    try {
-        await Role.deleteMany({});
-        await User.deleteMany({});
-        console.log('🗑️ Base de datos de usuarios limpia');
+        const productCount = await Product.countDocuments();
+        if (productCount > 0) {
+            console.log(`✅ BD ya tiene ${productCount} productos, semilla omitida.`);
+            return;
+        }
+        console.log('🌱 BD vacía, ejecutando semilla...');
 
         const adminRole = await Role.create({ role: 'admin' });
         await Role.create({ role: 'user' });
@@ -253,11 +241,7 @@ const seedProducts = async () => {
         });
 
         console.log('\n🎉 Seed completado exitosamente!');
-        process.exit(0);
     } catch (error) {
-        console.error('❌ Error creando productos:', error);
-        process.exit(1);
+        console.error('❌ Error en semilla:', error);
     }
 };
-
-seedProducts();
