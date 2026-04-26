@@ -10,15 +10,25 @@ dotenv.config();
 export const runSeedIfEmpty = async () => {
     try {
         const productCount = await Product.countDocuments();
-        if (productCount > 0) {
-            console.log(`✅ BD ya tiene ${productCount} productos, semilla omitida.`);
+        const hasStock = await Product.findOne({ quantity: { $gt: 0 } });
+        if (productCount >= 20 && hasStock) {
+            console.log(`[SEED] BD ya tiene ${productCount} productos con stock, semilla omitida.`);
             return;
         }
-        console.log('🌱 BD vacía, ejecutando semilla...');
+        console.log('[SEED] Ejecutando semilla...');
+
+        // Delete test/junk products
+        await Product.deleteMany({ name: { $in: ['Hola', 'hola', 'test', 'Test'] } });
+
+        // Ensure existing products have quantity > 0
+        await Product.updateMany(
+            { $or: [{ quantity: 0 }, { quantity: { $exists: false } }] },
+            { $set: { quantity: 50 } }
+        );
 
         const adminRole = await Role.create({ role: 'admin' });
         await Role.create({ role: 'user' });
-        console.log('📝 Roles creados (admin, user)');
+        console.log('[SEED] Roles creados (admin, user)');
 
         const hashedPassword = await bcryptjs.hash('admin123', 10);
         const adminUser = await User.create({
@@ -27,10 +37,10 @@ export const runSeedIfEmpty = async () => {
             password: hashedPassword,
             role: adminRole._id
         });
-        console.log('👤 Usuario administrador creado: admin / admin123');
+        console.log('[SEED] Usuario administrador creado: admin / admin123');
 
         await Product.deleteMany({});
-        console.log('🗑️ Productos anteriores eliminados');
+        console.log('[SEED] Productos anteriores eliminados');
 
         const products = [
             // TOPS
@@ -229,19 +239,17 @@ export const runSeedIfEmpty = async () => {
         ];
 
         const createdProducts = await Product.insertMany(products);
-        console.log(`✅ ${createdProducts.length} productos creados exitosamente!`);
+        console.log(`[SEED] ${createdProducts.length} productos creados exitosamente.`);
 
         const categoryCounts = await Product.aggregate([
             { $group: { _id: '$categoria', count: { $sum: 1 } } }
         ]);
-
-        console.log('\n📊 Resumen por categoría:');
+        console.log('[SEED] Resumen por categoria:');
         categoryCounts.forEach(cat => {
-            console.log(`   ${cat._id}: ${cat.count} productos`);
+            console.log(`  ${cat._id}: ${cat.count} productos`);
         });
-
-        console.log('\n🎉 Seed completado exitosamente!');
+        console.log('[SEED] Seed completado exitosamente.');
     } catch (error) {
-        console.error('❌ Error en semilla:', error);
+        console.error('[SEED] Error en semilla:', error);
     }
 };
