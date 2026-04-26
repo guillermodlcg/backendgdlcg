@@ -4,16 +4,13 @@ import { v2 as cloudinary } from 'cloudinary';
 //Funcion para obtener todos los productos
 export const getProducts = async (req, res) => {
     try {
-        // Verificar si el usuario es administrador
-        const isAdmin = req.user.role === process.env.ROLE_ADMIN;
+        // req.user.roles is an array set by validateToken middleware
+        const isAdmin = req.user.roles?.includes(process.env.ROLE_ADMIN);
         
         let query = {};
-        
-        // Si NO es admin, filtrar por su usuario
         if (!isAdmin) {
             query.user = req.user.id;
         }
-        // Si ES admin, query vacío = todos los productos
         
         const products = await Product.find(query).populate('user');
         res.json(products);

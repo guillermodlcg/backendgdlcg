@@ -5,7 +5,10 @@ const storage = multer.memoryStorage();
 const upload = multer({
     storage,
     limits: { fileSize: 5 * 1024 * 1024 } // 5MB
-}).single('image');
+}).fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'images', maxCount: 10 }
+]);
 
 const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
 
@@ -17,10 +20,14 @@ export const uploadToCloudinary = (req, res, next) => {
             return res.status(400).json({ message: [err.message] });
         }
 
-        // Sin imagen nueva → continuar sin subir
-        if (!req.file) return next();
+        // Accept file from either 'image' (single) or 'images' (multiple) field
+        const file = req.files?.image?.[0] || req.files?.images?.[0] || req.file || null;
+        console.log('[UPLOAD] file received:', !!file, file?.originalname);
 
-        if (!allowedMimes.includes(req.file.mimetype))
+        // Sin imagen nueva → continuar sin subir
+        if (!file) return next();
+
+        if (!allowedMimes.includes(file.mimetype))
             return res.status(400).json({ message: ['Tipo de archivo no permitido'] });
 
         // Parsear tallas y colores si vienen como string
@@ -32,12 +39,13 @@ export const uploadToCloudinary = (req, res, next) => {
         }
 
         // Subir a Cloudinary
-        const base64Image = Buffer.from(req.file.buffer).toString('base64');
-        const dataUri = `data:${req.file.mimetype};base64,${base64Image}`;
+        const base64Image = Buffer.from(file.buffer).toString('base64');
+        const dataUri = `data:${file.mimetype};base64,${base64Image}`;
 
         cloudinary.v2.uploader.upload(dataUri)
             .then((uploadResponse) => {
                 req.urlImage = uploadResponse.url;
+                console.log('[UPLOAD] Cloudinary URL:', req.urlImage);
                 next();
             })
             .catch((cloudErr) => {
