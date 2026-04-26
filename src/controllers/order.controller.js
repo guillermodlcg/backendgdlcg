@@ -6,7 +6,7 @@ export const createOrder = async (req, res) => {
   try {
     const { items, subTotal, iva, total, totalProducts, paymentMethod } = req.body;
     
-    //Validar que haya suficiente stock para cada producto
+    // Validar stock disponible (pero NO descontarlo aún — se descuenta al confirmar)
     for (const item of items) {
       const product = await Products.findById(item.productId);
       if (!product) {
@@ -20,7 +20,6 @@ export const createOrder = async (req, res) => {
       }
     }
 
-    //Crear la orden
     const newOrder = new Order({
       user: req.user.id,
       items,
@@ -33,16 +32,7 @@ export const createOrder = async (req, res) => {
     });
 
     const savedOrder = await newOrder.save();
-
-    //Actualizar el stock de cada producto
-    for (const item of items) {
-      await Products.findByIdAndUpdate(
-        item.productId,
-        { $inc: { quantity: -(parseInt(item.quantity) || 0) } },
-        { new: true }
-      );
-    }
-
+    // Stock NO se descuenta aquí — se descuenta cuando admin confirma la orden
     res.status(201).json(savedOrder);
   } catch (error) {
     console.error("Error al crear orden:", error);
@@ -56,12 +46,10 @@ export const updateOrderStatus = async (req, res) => {
     const { status } = req.body;
     
     const order = await Order.findById(req.params.id);
-    
     if (!order) {
       return res.status(404).json({ message: "Orden no encontrada" });
     }
 
-    // Verificar permisos: admin puede cambiar cualquier orden, usuario solo las suyas
     const isOwner = order.user.toString() === req.user.id;
     const isAdmin = req.user.roles && req.user.roles.some(role => 
       role.name === 'admin' || role === 'admin'
@@ -82,9 +70,21 @@ export const updateOrderStatus = async (req, res) => {
 
     const previousStatus = order.status;
 
-    // RESTORE stock: confirmed → cancelled
-    // Stock was already discounted at order creation (received), so only restore
-    // if the order was confirmed and is now being cancelled.
+    // DESCONTAR stock: received → confirmed
+    if (previousStatus === 'received' && status === 'confirmed') {
+      for (const item of order.items) {
+        const qty = parseInt(item.quantity) || 0;
+        if (qty > 0) {
+          await Products.findByIdAndUpdate(
+            item.productId,
+            { $inc: { quantity: -qty } },
+            { new: true }
+          );
+        }
+      }
+    }
+
+    // RESTAURAR stock: confirmed → cancelled
     if (previousStatus === 'confirmed' && status === 'cancelled') {
       for (const item of order.items) {
         const qty = parseInt(item.quantity) || 0;
@@ -96,28 +96,11 @@ export const updateOrderStatus = async (req, res) => {
           );
         }
       }
-      console.log('[ORDER] Stock restored for cancelled order:', req.params.id);
     }
-
-    // RESTORE stock: received → cancelled
-    // Stock was discounted at creation even for received status, so restore it.
-    if (previousStatus === 'received' && status === 'cancelled') {
-      for (const item of order.items) {
-        const qty = parseInt(item.quantity) || 0;
-        if (qty > 0) {
-          await Products.findByIdAndUpdate(
-            item.productId,
-            { $inc: { quantity: qty } },
-            { new: true }
-          );
-        }
-      }
-      console.log('[ORDER] Stock restored for cancelled (from received) order:', req.params.id);
-    }
+    // received → cancelled: no hay stock que restaurar (nunca se descontó)
 
     order.status = status;
     const updatedOrder = await order.save();
-
     res.json(updatedOrder);
   } catch (error) {
     console.error("Error en updateOrderStatus:", error);
