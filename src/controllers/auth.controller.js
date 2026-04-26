@@ -71,7 +71,8 @@ export const register = async (req, res) => {
             id: userSaved._id,
             username: userSaved.username,
             email: userSaved.email,
-            role: role.role
+            role: role.role,
+            token  // iOS Safari cross-site cookie fallback
         });
     } catch (error) {
         console.log(error);
@@ -121,7 +122,8 @@ export const login = async (req, res) => {
             id: userFound._id,
             username: userFound.username,
             email: userFound.email,
-            role: role.role
+            role: role.role,
+            token  // iOS Safari cross-site cookie fallback
         })
     } catch (error) {
         console.log(error);
@@ -164,7 +166,11 @@ export const profile = async (req, res) => {
 } // Fin del Profile
 //Función para validar el token de inicio de sesión
 export const verifyToken = async (req, res) => {
-    const { token } = req.cookies;
+    // Accept token from cookie OR Authorization header (iOS Safari cross-site cookie fallback)
+    const cookieToken = req.cookies?.token;
+    const headerToken = req.headers?.authorization?.replace('Bearer ', '');
+    const token = cookieToken || headerToken;
+
     if (!token)
         return res.status(400)
             .json({ message: ["No autorizado"] });
