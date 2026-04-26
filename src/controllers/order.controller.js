@@ -12,9 +12,10 @@ export const createOrder = async (req, res) => {
       if (!product) {
         return res.status(404).json({ message: `Producto con id ${item.productId} no encontrado` });
       }
-      if (product.quantity < item.quantity) {
+      const requestedQty = parseInt(item.quantity) || 0;
+      if (product.quantity < requestedQty) {
         return res.status(400).json({ 
-          message: `Stock insuficiente para ${product.name}. Disponible: ${product.quantity}, Solicitado: ${item.quantity}` 
+          message: `Stock insuficiente para ${product.name}. Disponible: ${product.quantity}, Solicitado: ${requestedQty}` 
         });
       }
     }
@@ -37,7 +38,7 @@ export const createOrder = async (req, res) => {
     for (const item of items) {
       await Products.findByIdAndUpdate(
         item.productId,
-        { $inc: { quantity: -item.quantity } },
+        { $inc: { quantity: -(parseInt(item.quantity) || 0) } },
         { new: true }
       );
     }
@@ -54,17 +55,11 @@ export const updateOrderStatus = async (req, res) => {
   try {
     const { status } = req.body;
     
-    console.log("Usuario:", req.user);
-    console.log("Body:", req.body);
-    
-    // Obtener la orden primero para validar permisos
     const order = await Order.findById(req.params.id);
     
     if (!order) {
       return res.status(404).json({ message: "Orden no encontrada" });
     }
-
-    console.log("Orden encontrada:", order);
 
     // Verificar permisos: admin puede cambiar cualquier orden, usuario solo las suyas
     const isOwner = order.user.toString() === req.user.id;
@@ -72,29 +67,56 @@ export const updateOrderStatus = async (req, res) => {
       role.name === 'admin' || role === 'admin'
     );
     
-    console.log("isOwner:", isOwner, "isAdmin:", isAdmin);
-    
     if (!isOwner && !isAdmin) {
       return res.status(403).json({ message: "No tienes permiso para modificar esta orden" });
     }
 
-    // Validar que el estado sea válido
     const validStatuses = ['received', 'confirmed', 'cancelled', 'delivered'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ message: "Estado inválido" });
     }
 
-    // Usuario normal solo puede cancelar su propia orden si no está entregada
     if (!isAdmin && status === 'cancelled' && order.status === 'delivered') {
       return res.status(400).json({ message: "No se puede cancelar una orden entregada" });
     }
 
-    // Actualizar el estado
-    const updatedOrder = await Order.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true }
-    );
+    const previousStatus = order.status;
+
+    // RESTORE stock: confirmed → cancelled
+    // Stock was already discounted at order creation (received), so only restore
+    // if the order was confirmed and is now being cancelled.
+    if (previousStatus === 'confirmed' && status === 'cancelled') {
+      for (const item of order.items) {
+        const qty = parseInt(item.quantity) || 0;
+        if (qty > 0) {
+          await Products.findByIdAndUpdate(
+            item.productId,
+            { $inc: { quantity: qty } },
+            { new: true }
+          );
+        }
+      }
+      console.log('[ORDER] Stock restored for cancelled order:', req.params.id);
+    }
+
+    // RESTORE stock: received → cancelled
+    // Stock was discounted at creation even for received status, so restore it.
+    if (previousStatus === 'received' && status === 'cancelled') {
+      for (const item of order.items) {
+        const qty = parseInt(item.quantity) || 0;
+        if (qty > 0) {
+          await Products.findByIdAndUpdate(
+            item.productId,
+            { $inc: { quantity: qty } },
+            { new: true }
+          );
+        }
+      }
+      console.log('[ORDER] Stock restored for cancelled (from received) order:', req.params.id);
+    }
+
+    order.status = status;
+    const updatedOrder = await order.save();
 
     res.json(updatedOrder);
   } catch (error) {
