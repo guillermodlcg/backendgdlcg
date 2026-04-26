@@ -3,10 +3,13 @@ import jwt from 'jsonwebtoken';
 import User from '../models/user.models.js';
 
 export const authRequired = async (req, res, next) => {
-    //Obtenemos las cookies
-    const { token } = req.cookies;
+    // Aceptar token de cookie O de header Authorization (para móvil)
+    let token = req.cookies?.token;
+    if (!token && req.headers.authorization?.startsWith('Bearer ')) {
+        token = req.headers.authorization.split(' ')[1];
+    }
 
-    if (!token) //Si no hay token en las cookies
+    if (!token)
         return res.status(401)
             .json({ message: ["No token, autorización denegada"] });
 
