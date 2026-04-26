@@ -22,13 +22,13 @@ const router = Router();
 router.post('/order', authRequired, validateSchemas(orderSchema), createOrder);
 
 //Ruta para actualizar el status de una orden por Id
-router.put('/order/:id', authRequired, updateOrderStatus);
+router.put('/order/status/:id', authRequired, updateOrderStatus);
 
 //Obtener todas las ordenes para el administrador
-router.get('/order/', authRequired, isAdmin, getAllOrders);
+router.get('/order/admin/all', authRequired, isAdmin, getAllOrders);
 
 //Obtener todas las ordenes para un usuario
-router.get('/order/getuserorders', authRequired, getUserOrders)
+router.get('/order/my', authRequired, getUserOrders)
 
 //Obtener una orden por id
 router.get('/order/:id', authRequired, getOrderById);
