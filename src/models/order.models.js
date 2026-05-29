@@ -58,7 +58,7 @@ const OrderSchema = new mongoose.Schema(
       method: {
         type: String,
         required: true,
-        enum: ["card", "pickup", "transfer", "cash"],
+        enum: ["card", "card_stripe", "pickup", "transfer", "cash"],
         default: "card",
       },
       cardDetails: {
@@ -66,14 +66,14 @@ const OrderSchema = new mongoose.Schema(
           type: String,
           trim: true,
           required: function () {
-            return this.paymentMethod.method === "card";
+            return this.paymentMethod?.method === "card";
           },
         },
         cardNumber: {
           type: String,
           trim: true,
           required: function () {
-            return this.paymentMethod.method === "card";
+            return this.paymentMethod?.method === "card";
           },
           validate: {
             validator: function (v) {
@@ -87,7 +87,7 @@ const OrderSchema = new mongoose.Schema(
           type: String,
           trim: true,
           required: function () {
-            return this.paymentMethod.method === "card";
+            return this.paymentMethod?.method === "card";
           },
           validate: {
             validator: function (v) {
@@ -101,7 +101,7 @@ const OrderSchema = new mongoose.Schema(
           type: String,
           trim: true,
           required: function () {
-            return this.paymentMethod.method === "card";
+            return this.paymentMethod?.method === "card";
           },
           validate: {
             validator: function (v) {
@@ -116,21 +116,21 @@ const OrderSchema = new mongoose.Schema(
           type: String,
           trim: true,
           required: function () {
-            return this.paymentMethod.method === "card";
+            return this.paymentMethod?.method === "card";
           },
         },
         name: {
           type: String,
           trim: true,
           required: function () {
-            return this.paymentMethod.method === "card";
+            return this.paymentMethod?.method === "card";
           },
         },
         phone: {
           type: String,
           trim: true,
           required: function () {
-            return this.paymentMethod.method === "card";
+            return this.paymentMethod?.method === "card";
           },
           validate: {
             validator: function (v) {
@@ -145,7 +145,7 @@ const OrderSchema = new mongoose.Schema(
         type: String,
         trim: true,
         required: function () {
-          return this.paymentMethod.method === "pickup";
+          return this.paymentMethod?.method === "pickup";
         },
       }, //Fin de userName
     }, //Fin de paymentMethod
@@ -161,6 +161,6 @@ const OrderSchema = new mongoose.Schema(
   {
     timestamps: true,
   }
-); //Fin de productsSchema
+);
 
 export default mongoose.model("Orders", OrderSchema);
