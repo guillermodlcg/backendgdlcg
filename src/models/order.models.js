@@ -151,9 +151,12 @@ const OrderSchema = new mongoose.Schema(
     }, //Fin de paymentMethod
     status: {
       type: String,
-      enum: ["received", "confirmed", "cancelled", "delivered"],
+      enum: ["pending_payment", "received", "confirmed", "cancelled", "delivered"],
       default: "received",
     }, //Fin de status
+    stripeSessionId: { type: String, default: null },
+    stripePaymentStatus: { type: String, default: null },
+    totalStripe: { type: Number, default: null },
   },
   {
     timestamps: true,

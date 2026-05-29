@@ -17,9 +17,13 @@ import authRoutes from './routes/auth.routes.js';
 import productRoutes from './routes/product.routes.js';
 //Importamos las rutas para ordenes
 import orderRoutes from './routes/order.routes.js';
+import stripeRoutes from './routes/stripe.routes.js';
 import { success } from 'zod';
 
 const app = express();
+// Middleware raw para Stripe webhook (antes de express.json)
+app.use('/api/stripe/webhook', express.raw({ type: '*/*' }));
+
 app.use(cors({
     origin: function(origin, callback) {
         const allowed = [
@@ -45,6 +49,7 @@ app.use(express.urlencoded({extended: false}));
 app.use('/api/', authRoutes);
 app.use('/api/', productRoutes);
 app.use('/api/', orderRoutes);
+app.use('/api/stripe', stripeRoutes);
 app.get('/', (req, res)=>{
     res.json({
         message: "Bienvenido al API REST de Productos",
