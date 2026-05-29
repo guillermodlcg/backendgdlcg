@@ -94,13 +94,20 @@ const shippingAddressSchema = z.object({
 
 //Esquema para la información de pago
 const paymentMethodSchema = z.discriminatedUnion("method", [
+  // Tarjeta manual (flujo original — se conserva)
   z.object({
     method: z.literal("card"),
     cardDetails: cardDetailsSchema,
     shippingAddress: shippingAddressSchema,
   }),
+  // Stripe Checkout (nuevo — sin cardDetails)
   z.object({
-    method: z.enum(["pickup"]),
+    method: z.literal("card_stripe"),
+    shippingAddress: shippingAddressSchema.optional(),
+  }),
+  // Recoger en tienda
+  z.object({
+    method: z.literal("pickup"),
     userName: z
       .string("El nombre es requerido")
       .min(3, {
@@ -117,7 +124,7 @@ export const orderSchema = z
       .array(cartItemSchema)
       .min(1, "La orden debe tener al menos un producto"),
 
-    //Método de envío para discriminar la unión (card o pickup pero no ambos)
+    //Método de envío para discriminar la unión (card, card_stripe o pickup)
     paymentMethod: paymentMethodSchema,
 
     //Campos para el cálculo del total de productos y precio de la orden
@@ -169,10 +176,11 @@ export const orderSchema = z
           })
       ),
 
-    //Datos para el estado del pedido y la fecha y hora de creación
+    //Estado del pedido — incluye pending_payment para flujo Stripe
     status: z
-      .enum(["received", "confirmed", "cancelled", "delivered"])
+      .enum(["pending_payment", "received", "confirmed", "cancelled", "delivered"])
       .default("received"),
+
     createdAt: z.date().optional(),
   })
 
