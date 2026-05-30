@@ -110,8 +110,8 @@ const paymentMethodSchema = z.discriminatedUnion("method", [
     method: z.literal("pickup"),
     userName: z
       .string("El nombre es requerido")
-      .min(3, {
-        error: "El nombre debe tener al menos 3 caracteres",
+      .min(2, {
+        error: "El nombre debe tener al menos 2 caracteres",
       })
       .trim(),
   }),
