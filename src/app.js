@@ -18,7 +18,6 @@ import productRoutes from './routes/product.routes.js';
 //Importamos las rutas para ordenes
 import orderRoutes from './routes/order.routes.js';
 import stripeRoutes from './routes/stripe.routes.js';
-import { success } from 'zod';
 
 const app = express();
 // Middleware raw para Stripe webhook (antes de express.json)
